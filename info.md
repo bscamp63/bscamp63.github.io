@@ -1,3 +1,3 @@
 layout: page
 title: "Bryan Campos"
-permalink: /Bryan-Campos
+permalink: /info
