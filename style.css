@@ -1,3 +1,31 @@
-:root {
-  color-scheme: dark;
+:root { color-scheme: light dark; }
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  body { background: #0d1117; color: #c9d1d9; }
+}
+
+@media (prefers-color-scheme: light) {
+  body { background: #ffffff; color: #111111; }
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.nav a {
+  display: inline-block;
+  margin-right: 1rem;
+  color: #58a6ff;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  text-decoration: underline;
 }
