@@ -1,7 +1,5 @@
 # Bryan Campos
 
-:root {color-scheme: dark;}
-
 text
 
 <details>
