@@ -1,0 +1,157 @@
+from enum import Enum
+from dataclasses import dataclass
+
+""" 
+This version is structured to demonstrate Software Design & Engineering concepts:
+- Separation of concerns (models vs services vs validation vs UI/controller vs app entry)
+- Encapsulation of responsibilities (each class has a clear purpose)
+- Basic role-based authorization (admin vs user)
+- Maintainable code organization that can be extended for later milestones:
+  - Algorithms & Data Structures (multiple clients, sorting/searching)
+  - Databases (persistence layer / repository pattern) 
+"""
+
+# Domain Models
+
+class Role(Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
+@dataclass
+class Client:
+    client_id: int
+    name: str
+    balance: float
+
+
+# Services
+
+class AuthenticationService:
+
+
+# AuthenticationService handles the application's authentication decision
+
+
+    def authenticate(self, username: str) -> Role | None:
+        if username.lower() == "admin":
+            return Role.ADMIN
+        elif username:
+            return Role.USER
+        return None
+
+
+class ClientService:
+
+# ClientService manages client records
+
+
+    def __init__(self):
+        self.clients = {
+            1001: Client(1001, "John Doe", 1500.00)
+        }
+
+    def get_client(self, client_id: int) -> Client | None:
+        return self.clients.get(client_id)
+
+    def update_client_name(self, client_id: int, new_name: str) -> bool:
+        client = self.get_client(client_id)
+        if client:
+            client.name = new_name
+            return True
+        return False
+
+
+# Utilities
+
+class InputValidator:
+
+# InputValidator centralizes input parsing/validation
+
+    @staticmethod
+    def read_int(prompt: str) -> int:
+        while True:
+            try:
+                return int(input(prompt))
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+
+
+# UI Controller
+
+class MenuController:
+
+# MenuController drives the user experience
+
+    def __init__(self, role: Role, client_service: ClientService):
+        self.role = role
+        self.client_service = client_service
+
+    def display_menu(self):
+        print("\nMenu Options:")
+        print("1. View Client")
+        if self.role == Role.ADMIN:
+            print("2. Update Client Name")
+        print("0. Exit")
+
+    def handle_selection(self):
+        while True:
+            self.display_menu()
+            choice = InputValidator.read_int("Select an option: ")
+
+            if choice == 1:
+                self.view_client()
+            elif choice == 2 and self.role == Role.ADMIN:
+                self.update_client()
+            elif choice == 0:
+                print("Exiting application.")
+                break
+            else:
+                print("Unauthorized or invalid selection.")
+
+    def view_client(self):
+        client_id = InputValidator.read_int("Enter client ID: ")
+        client = self.client_service.get_client(client_id)
+        if client:
+            print(f"Client ID: {client.client_id}")
+            print(f"Name: {client.name}")
+            print(f"Balance: ${client.balance:.2f}")
+        else:
+            print("Client not found.")
+
+    def update_client(self):
+        client_id = InputValidator.read_int("Enter client ID: ")
+        new_name = input("Enter new client name: ").strip()
+        if self.client_service.update_client_name(client_id, new_name):
+            print("Client name updated successfully.")
+        else:
+            print("Failed to update client.")
+
+
+# Application Entry
+
+class ClientManagementApplication:
+
+# ClientManagementApplication wires the system together and starts execution
+
+    def __init__(self):
+        self.auth_service = AuthenticationService()
+        self.client_service = ClientService()
+
+    def run(self):
+        print("Client Management System")
+        username = input("Enter username: ").strip()
+
+        role = self.auth_service.authenticate(username)
+        if not role:
+            print("Authentication failed.")
+            return
+
+        print(f"Logged in as {role.value}.")
+        menu = MenuController(role, self.client_service)
+        menu.handle_selection()
+
+
+if __name__ == "__main__":
+    app = ClientManagementApplication()
+    app.run()
