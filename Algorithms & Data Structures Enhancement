@@ -1,0 +1,334 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import Dict, List, Optional, Tuple
+
+"""
+This version is designed to highlight:
+- Intentional data structure selection (hash map / dictionary keyed by client_id)
+- Algorithmic operations (sorting, searching, filtering, aggregation)
+- Separation of concerns (models, services, validation utilities, UI controller, app entry)
+- Role-based authorization (admin vs user) to restrict mutation operations
+"""
+
+# Domain Models
+
+class Role(Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
+@dataclass
+class Client:
+    client_id: int
+    name: str
+    balance: float
+    status: str = "ACTIVE"  # simple field for filtering
+
+
+# Utilities
+
+class InputValidator:
+
+# InputValidator centralizes input parsing/validation
+
+    @staticmethod
+    def read_int_in_range(prompt: str, min_val: int, max_val: int) -> int:
+        while True:
+            raw = input(prompt).strip()
+            try:
+                value = int(raw)
+                if min_val <= value <= max_val:
+                    return value
+                print(f"Please enter a number between {min_val} and {max_val}.")
+            except ValueError:
+                print("Invalid input. Please enter a valid integer.")
+
+    @staticmethod
+    def read_int(prompt: str) -> int:
+        while True:
+            raw = input(prompt).strip()
+            try:
+                return int(raw)
+            except ValueError:
+                print("Invalid input. Please enter a valid integer.")
+
+    @staticmethod
+    def read_nonempty(prompt: str) -> str:
+        while True:
+            value = input(prompt).strip()
+            if value:
+                return value
+            print("Input cannot be empty.")
+
+    @staticmethod
+    def read_float(prompt: str) -> float:
+        while True:
+            raw = input(prompt).strip()
+            try:
+                return float(raw)
+            except ValueError:
+                print("Invalid input. Please enter a valid number.")
+
+
+# Services
+
+class AuthenticationService:
+
+# AuthenticationService handles the application's authentication decision
+
+    def authenticate(self, username: str) -> Optional[Role]:
+        if not username:
+            return None
+        return Role.ADMIN if username.lower() == "admin" else Role.USER
+
+
+class ClientService:
+
+# ClientService manages client records
+
+    def __init__(self) -> None:
+        # Dictionary keyed by client_id
+        self._clients: Dict[int, Client] = {}
+
+        # Examples
+        self.add_client(Client(1001, "John Doe", 1500.00, "ACTIVE"))
+        self.add_client(Client(1002, "Ava Martinez", 250.50, "ACTIVE"))
+        self.add_client(Client(1003, "Noah Kim", 8000.00, "INACTIVE"))
+        self.add_client(Client(1004, "Sophia Patel", 120.00, "ACTIVE"))
+
+    # Core CRUD-like ops
+
+    def add_client(self, client: Client) -> bool:
+        """
+        Insert operation:
+        Validates uniqueness of client_id
+        Complexity: O(1) average for dict membership check and insert
+        """
+        if client.client_id in self._clients:
+            return False
+        self._clients[client.client_id] = client
+        return True
+
+    def get_client(self, client_id: int) -> Optional[Client]:
+        """Lookup by key. Complexity: O(1) average."""
+        return self._clients.get(client_id)
+
+    def update_client_name(self, client_id: int, new_name: str) -> bool:
+        client = self.get_client(client_id)
+        if not client:
+            return False
+        client.name = new_name
+        return True
+
+    def update_client_balance(self, client_id: int, new_balance: float) -> bool:
+        client = self.get_client(client_id)
+        if not client:
+            return False
+        client.balance = new_balance
+        return True
+
+    # Algorithmic Operations
+
+    def list_clients_sorted_by_name(self) -> List[Client]:
+        """
+        Sorting operation:
+        Converts dict values to list, sorts by name
+        Complexity: O(n log n)
+        """
+        return sorted(self._clients.values(), key=lambda c: c.name.lower())
+
+    def list_clients_sorted_by_balance(self, descending: bool = True) -> List[Client]:
+        """
+        Sorting operation:
+        Complexity: O(n log n)
+        """
+        return sorted(self._clients.values(), key=lambda c: c.balance, reverse=descending)
+
+    def filter_by_status(self, status: str) -> List[Client]:
+        """
+        Filtering operation (linear scan)
+        Complexity: O(n)
+        """
+        status_upper = status.upper()
+        return [c for c in self._clients.values() if c.status.upper() == status_upper]
+
+    def search_name_contains(self, query: str) -> List[Client]:
+        """
+        Simple substring search across names (linear scan)
+        Complexity: O(n * m) where m is average name length
+        """
+        q = query.lower()
+        return [c for c in self._clients.values() if q in c.name.lower()]
+
+    def summary_stats(self) -> Tuple[int, float, float]:
+        """
+        Aggregation:
+        returns (count, total_balance, average_balance)
+        Complexity: O(n)
+        """
+        clients = list(self._clients.values())
+        count = len(clients)
+        total = sum(c.balance for c in clients)
+        avg = (total / count) if count else 0.0
+        return count, total, avg
+
+
+# UI Controller
+
+class MenuController:
+
+# MenuController drives the user experience
+
+    def __init__(self, role: Role, client_service: ClientService) -> None:
+        self.role = role
+        self.client_service = client_service
+
+    def display_menu(self) -> None:
+        print("\nMenu Options:")
+        print("1. View Client by ID (O(1) lookup)")
+        print("2. List Clients (sorted by name)")
+        print("3. Search Clients by Name (contains)")
+        print("4. Show Summary Statistics")
+        print("5. Filter Clients by Status")
+
+        if self.role == Role.ADMIN:
+            print("6. Add Client (admin)")
+            print("7. Update Client Name (admin)")
+            print("8. Update Client Balance (admin)")
+            print("9. List Clients (sorted by balance)")
+
+        print("0. Exit")
+
+    def run(self) -> None:
+        while True:
+            self.display_menu()
+
+            max_choice = 9 if self.role == Role.ADMIN else 5
+            choice = InputValidator.read_int_in_range("Select an option: ", 0, max_choice)
+
+            if choice == 0:
+                print("Exiting application.")
+                return
+
+            if choice == 1:
+                self.view_client()
+            elif choice == 2:
+                self.list_clients_by_name()
+            elif choice == 3:
+                self.search_clients()
+            elif choice == 4:
+                self.show_stats()
+            elif choice == 5:
+                self.filter_status()
+            elif self.role == Role.ADMIN and choice == 6:
+                self.add_client()
+            elif self.role == Role.ADMIN and choice == 7:
+                self.update_client_name()
+            elif self.role == Role.ADMIN and choice == 8:
+                self.update_client_balance()
+            elif self.role == Role.ADMIN and choice == 9:
+                self.list_clients_by_balance()
+
+    def view_client(self) -> None:
+        client_id = InputValidator.read_int("Enter client ID: ")
+        client = self.client_service.get_client(client_id)
+        if not client:
+            print("Client not found.")
+            return
+        self.print_client(client)
+
+    def list_clients_by_name(self) -> None:
+        clients = self.client_service.list_clients_sorted_by_name()
+        print("\nClients (sorted by name):")
+        for c in clients:
+            self.print_client(c)
+
+    def list_clients_by_balance(self) -> None:
+        clients = self.client_service.list_clients_sorted_by_balance(descending=True)
+        print("\nClients (sorted by balance, high to low):")
+        for c in clients:
+            self.print_client(c)
+
+    def search_clients(self) -> None:
+        query = InputValidator.read_nonempty("Enter name search text: ")
+        results = self.client_service.search_name_contains(query)
+        print(f"\nResults for '{query}':")
+        if not results:
+            print("No matching clients.")
+            return
+        for c in results:
+            self.print_client(c)
+
+    def show_stats(self) -> None:
+        count, total, avg = self.client_service.summary_stats()
+        print("\nClient Summary Statistics:")
+        print(f"Total clients: {count}")
+        print(f"Total balance: ${total:.2f}")
+        print(f"Average balance: ${avg:.2f}")
+
+    def filter_status(self) -> None:
+        status = InputValidator.read_nonempty("Enter status (ACTIVE/INACTIVE): ")
+        results = self.client_service.filter_by_status(status)
+        print(f"\nClients with status '{status.upper()}':")
+        if not results:
+            print("No clients found for that status.")
+            return
+        for c in results:
+            self.print_client(c)
+
+    # Admin-only operations
+
+    def add_client(self) -> None:
+        cid = InputValidator.read_int("Enter new client ID: ")
+        name = InputValidator.read_nonempty("Enter client name: ")
+        bal = InputValidator.read_float("Enter starting balance: ")
+        status = InputValidator.read_nonempty("Enter status (ACTIVE/INACTIVE): ").upper()
+
+        ok = self.client_service.add_client(Client(cid, name, bal, status))
+        print("Client added." if ok else "Client ID already exists.")
+
+    def update_client_name(self) -> None:
+        cid = InputValidator.read_int("Enter client ID: ")
+        new_name = InputValidator.read_nonempty("Enter new name: ")
+        ok = self.client_service.update_client_name(cid, new_name)
+        print("Name updated." if ok else "Client not found.")
+
+    def update_client_balance(self) -> None:
+        cid = InputValidator.read_int("Enter client ID: ")
+        new_bal = InputValidator.read_float("Enter new balance: ")
+        ok = self.client_service.update_client_balance(cid, new_bal)
+        print("Balance updated." if ok else "Client not found.")
+
+    @staticmethod
+    def print_client(client: Client) -> None:
+        print(f"- ID: {client.client_id} | Name: {client.name} | "
+              f"Balance: ${client.balance:.2f} | Status: {client.status}")
+
+
+# Application Entry
+
+class ClientManagementApplication:
+
+# ClientManagementApplication wires the system together and starts execution
+
+    def __init__(self) -> None:
+        self.auth_service = AuthenticationService()
+        self.client_service = ClientService()
+
+    def run(self) -> None:
+        print("Client Management System")
+        username = InputValidator.read_nonempty("Enter username: ")
+
+        role = self.auth_service.authenticate(username)
+        if not role:
+            print("Authentication failed.")
+            return
+
+        print(f"Logged in as {role.value}.")
+        MenuController(role, self.client_service).run()
+
+
+if __name__ == "__main__":
+    ClientManagementApplication().run()
