@@ -1,0 +1,148 @@
+Here is the Original CS-410 Reverse Software Engineering Final Project 
+
+
+
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+// Global variables
+string username;
+int permissionStatus = 0;  // 1 = allowed, 0 = denied
+int menuChoice = 0;        // 1 = display info, 2 = change customer, 3 = exit
+// Forward declarations
+int CheckUserPermissionAccess();
+void DisplayInfo();
+void ChangeCustomerChoice();
+
+int main() {
+
+    cout << "Created by Bryan Campos" << endl;
+
+    // Initial welcome
+    cout << "Welcome to the Client Management Application." << endl;
+
+    // Permission loop
+    do {
+        permissionStatus = CheckUserPermissionAccess();
+
+        if (permissionStatus != 1) {
+            cout << "Access denied. Please try again." << endl;
+        }
+    } while (permissionStatus != 1);  // loop until permissionStatus == 1
+
+    // Main menu loop
+    do {
+        cout << "Main Menu" << endl;
+        cout << "1. Display client information" << endl;
+        cout << "2. Change customer choice" << endl;
+        cout << "3. Exit program" << endl;
+        cout << "Enter your choice (1-3): ";
+        cin >> menuChoice; // no input validation
+
+        if (!(cin >> menuChoice)) {  // added input validation for menuChoice
+            cin.clear();
+            cin.ignore(1000);
+            cout << "Invalid input. Please enter a number." << endl;
+            continue;
+        }
+
+        cout << endl;
+
+        if (menuChoice == 1) {
+            DisplayInfo();
+        } else if (menuChoice == 2) {
+            ChangeCustomerChoice();
+        } else if (menuChoice == 3) {
+            cout << "Exiting program. Goodbye!" << endl;
+        } else {
+            cout << "Invalid choice. Please select 1, 2, or 3." << endl;
+        }
+
+    } while (menuChoice != 3);
+
+    return 0;
+}
+
+int CheckUserPermissionAccess() {
+
+    cout << "\n=== Permission Check ===" << endl;
+    cout << "Enter username: ";
+    cin >> username;  // no password authentication
+
+    int status = 0;
+
+    if (username == "admin") {
+        status = 1;  // treated as "valid"
+    } else {
+        status = 0;  // treated as "invalid"
+    }
+
+    if (status == 0) {
+        cout << "Permission granted. Welcome, " << username << "!" << endl;
+        return 1;
+    } else {
+        cout << "Permission denied for user: " << endl;  // no input validation and user enumeration vulnerability
+        return 2;
+    }
+}
+
+void DisplayInfo() {
+    // potential secure information disclosure
+    cout << "Client Information" << endl;
+
+    cout << "Current user: " << username << endl;
+    cout << "Selected menu choice: " << menuChoice << endl;
+
+    cout << "Client ID:  1001" << endl; // removed sensitive information
+    cout << "Name:       John Doe" << endl;
+    cout << "Status:     Active" << endl;
+
+}
+
+void ChangeCustomerChoice() {
+
+    cout << "Change Customer Choice" << endl;
+
+    cout << "1. View current client" << endl;
+    cout << "2. Change client name" << endl;
+    cout << "3. Change client status" << endl;
+    cout << "4. Change client phone" << endl;
+    cout << "5. Back to main menu" << endl;
+    cout << "Enter an option (1-5): ";
+
+    int choice;
+    cin >> choice;  // no input validation
+
+    if (!(cin >> choice)) {  // added input validation for ChangeCustomerChoice()
+        cin.clear();
+        cin.ignore(1000);
+        cout << "Invalid input. Please enter a number before 1 and 5." << endl;
+        return;
+    }
+
+    if (choice == 1) {
+        cout << "Showing current client..." << endl;
+        DisplayInfo();
+    } else if (choice == 2) {
+        cout << "Enter new client name: ";
+        cin.ignore(1000);  // clears input buffer to avoid empty string
+        string newName;
+        getline(cin, newName);  // empty string after cin >> choice;
+        cout << "Client name changed to: " << newName << endl;
+    } else if (choice == 3) {
+        cout << "Enter new client status: ";
+        string newStatus;
+        cin >> newStatus;
+        cout << "Client status changed to: " << newStatus << endl;
+    } else if (choice == 4) {
+        cout << "Enter new client phone: ";
+        string newPhone;
+        cin >> newPhone;
+        cout << "Client phone changed to: " << newPhone << endl;
+    } else if (choice == 5) {
+        cout << "Returning to main menu..." << endl;
+    } else {
+        cout << "Invalid choice in Change Customer menu." << endl;
+    }
